@@ -54,7 +54,9 @@ async def purge(
     if delay:
         bot_reply = bot_reply + " in 24 hours"
 
-    bot_reply = bot_reply + "?\n\n*(Note: This cannot be cancelled!)*"
+    bot_reply = (
+        bot_reply + "?\n\n*(Note: Once you click `Yes`, this cannot be cancelled!)*"
+    )
 
     # Send response
     await inter.send(bot_reply, view=component, ephemeral=True)
@@ -166,7 +168,7 @@ async def on_button_click(inter: disnake.MessageInteraction):
     # Handle "NO"
     elif inter.component.custom_id == "NO":
         await inter.send(
-            f"Got it, {inter.author.mention}! Deleting <#{inter.channel_id}> cancelled!",
+            f"Okay, {inter.author.mention}! <#{inter.channel_id}> will **not** be deleted!",
             ephemeral=True,
         )
 

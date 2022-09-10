@@ -1,4 +1,4 @@
-# Papa Chu Discord bot
+# PurgeBot
 
 <!-- scope = bot
 perms = manage channels, read messages/view channels, send messages, use slash commands
