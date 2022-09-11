@@ -140,8 +140,7 @@ def set_log_channel_id(channel_id):
 ## HELPER ##
 ############
 def get_duration():
-    # tomorrow = datetime.now() + timedelta(hours=24)
-    tomorrow = datetime.now() + timedelta(minutes=2)
+    tomorrow = datetime.now() + timedelta(hours=24)
     unix = int(mktime(tomorrow.timetuple()))
     return f"<t:{unix}:R>"
 
