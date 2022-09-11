@@ -6,9 +6,12 @@ import disnake.ui
 from disnake.ext import commands
 from disnake.ui import Button, View
 from dotenv import load_dotenv
+from time import mktime
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
+
 
 command_prefix = commands.when_mentioned
 description = "Salutations! I'm here to help clean up your rooms!"
@@ -25,13 +28,16 @@ bot = commands.Bot(
 ###################
 ## PURGE COMMAND ##
 ###################
-@bot.slash_command(
-    default_member_permissions=disnake.Permissions(create_public_threads=True)
-)
+
+(delay_in_seconds, delay_in_words) = (86400, "24 hours")
+# (delay_in_seconds, delay_in_words) = (120, "2 minutes")
+
+
+@bot.slash_command(default_member_permissions=disnake.Permissions(manage_channels=True))
 async def purge(
     inter: disnake.MessageCommandInteraction,
     delay: bool = commands.Param(
-        description="Delay channel deletion by 24 hours? (default: False)",
+        description=f"Delete channel in {delay_in_words}? (default: False)",
         default=False,
     ),
 ):
@@ -52,7 +58,7 @@ async def purge(
     # Build bot reply
     bot_reply = f"Are you sure you want to delete <#{inter.channel_id}>"
     if delay:
-        bot_reply = bot_reply + " in 24 hours"
+        bot_reply = bot_reply + f" in {delay_in_words}"
 
     bot_reply = (
         bot_reply + "?\n\n*(Note: Once you click `Yes`, this cannot be cancelled!)*"
@@ -77,29 +83,37 @@ async def set_log_channel(
     await inter.send(f"PurgeBot logs will be sent to <#{channel.id}>!")
 
 
-############
-## HELPER ##
-############
-async def delete_channel(channel: disnake.TextChannel, delay):
-    if delay:
-        await asyncio.sleep(36000)  # 10 hours
-    else:
-        await asyncio.sleep(3)
-
-    log_channel_id = get_log_channel_id()
-    if log_channel_id:
-        log_channel = bot.get_channel(log_channel_id)
-        await log_channel.send(f"{channel.name} deleted!")
-
-    await channel.delete()
-
-
-def is_valid_for_deletion(category_id):
+###################
+## HELPER: PURGE ##
+###################
+def is_channel_valid_for_deletion(category_id):
     category_ids = os.getenv("CATEGORY_IDS")
     category_ids = category_ids.split(",")
     return str(category_id) in category_ids
 
 
+async def delete_channel(inter: disnake.MessageInteraction, delay):
+    if delay:
+        await asyncio.sleep(delay_in_seconds)
+    else:
+        await asyncio.sleep(3)
+
+    # Log event
+    log_channel_id = get_log_channel_id()
+    if log_channel_id:
+        log_channel = bot.get_channel(log_channel_id)
+        embed = disnake.Embed(
+            title=f"PurgeBot is done cleaning!",
+            description=f"[{inter.author.mention}] #{inter.channel.name} has been deleted!",
+        )
+        await log_channel.send(embed=embed)
+
+    await inter.channel.delete()
+
+
+#####################
+## HELPER: LOGGING ##
+#####################
 def get_log_channel_file():
     if os.path.exists("test_channel.txt"):
         return "test_channel.txt"
@@ -122,6 +136,16 @@ def set_log_channel_id(channel_id):
         f.write(str(channel_id))
 
 
+############
+## HELPER ##
+############
+def get_duration():
+    # tomorrow = datetime.now() + timedelta(hours=24)
+    tomorrow = datetime.now() + timedelta(minutes=2)
+    unix = int(mktime(tomorrow.timetuple()))
+    return f"<t:{unix}:R>"
+
+
 ########################
 ## DISCORD BOT EVENTS ##
 ########################
@@ -129,36 +153,34 @@ def set_log_channel_id(channel_id):
 async def on_button_click(inter: disnake.MessageInteraction):
     # Handle "YES"
     if "YES" in inter.component.custom_id:
+
         # Check if channel is valid for deletion
-        if is_valid_for_deletion(inter.channel.category_id):
+        if is_channel_valid_for_deletion(inter.channel.category_id):
             delay = False
             if str(True) in inter.component.custom_id:
                 delay = True
+
+            message = f"Deleting #{inter.channel.name} (<#{inter.channel_id}>) "
+            if delay:
+                message = message + f"{get_duration()}"
+            else:
+                message = message + "in a few seconds"
 
             # Log event
             log_channel_id = get_log_channel_id()
             if log_channel_id:
                 log_channel = bot.get_channel(log_channel_id)
-                log = f"{inter.author}: Initiated deletion of <#{inter.channel_id}> ({inter.channel.name}) in "
-                if delay:
-                    log = log + "24 hours"
-                else:
-                    log = log + "a few seconds"
-                await log_channel.send(log)
+                embed = disnake.Embed(
+                    title=f"PurgeBot will clean soon...",
+                    description=f"[{inter.author.mention}] {message}",
+                )
+                await log_channel.send(embed=embed)
 
             # Formulate and send reply
-            bot_reply = (
-                f"Got it, {inter.author.mention}! Deleting <#{inter.channel_id}> in "
-            )
-            if delay:
-                bot_reply = bot_reply + "24 hours"
-            else:
-                bot_reply = bot_reply + "a few seconds"
-
-            bot_reply = bot_reply + "..."
-
+            bot_reply = f"Understood, {inter.author.mention}! {message}..."
             await inter.send(bot_reply)
-            await delete_channel(inter.channel, delay)
+
+            await delete_channel(inter, delay)
         else:
             await inter.send(
                 f"Sorry, {inter.author.mention}. I'm not allowed to delete <#{inter.channel_id}>.",
@@ -168,7 +190,7 @@ async def on_button_click(inter: disnake.MessageInteraction):
     # Handle "NO"
     elif inter.component.custom_id == "NO":
         await inter.send(
-            f"Okay, {inter.author.mention}! <#{inter.channel_id}> will **not** be deleted!",
+            f"Okay, {inter.author.mention}! I will **not** delete <#{inter.channel_id}>!",
             ephemeral=True,
         )
 
@@ -178,7 +200,7 @@ async def on_connect():
     print(f"{bot.user.name} has connected to Discord!")
     await bot.change_presence(
         activity=disnake.Activity(
-            name="room cleaning! | /purge",
+            name="room purge! | /purge",
             type=disnake.ActivityType.playing,
         )
     )
@@ -195,7 +217,7 @@ async def on_ready():
 # @bot.slash_command(guild_ids=[679218449024811067])
 # async def test(inter: disnake.CommandInteraction):
 #     """TEST"""
-#     await inter.send(f"{get_channel_file()}")
+#     await inter.send(f"HELLO {get_duration()}")
 
 
 #######################
