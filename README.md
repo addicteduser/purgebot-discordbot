@@ -1,5 +1,7 @@
 # PurgeBot
 
+Guide: https://tinyurl.com/purgebot-guide
+
 <!-- scope = bot
 perms = manage channels, read messages/view channels, send messages, use slash commands
 
