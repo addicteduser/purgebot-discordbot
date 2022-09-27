@@ -439,7 +439,8 @@ def get_delete_categories_file(guild_id):
 
 def append_delete_category_id(guild_id, category_id):
     with open(get_delete_categories_file(guild_id), "a+") as f:
-        f.write(str(category_id))
+        line = f"{category_id}\n"
+        f.write(line)
 
 
 def remove_delete_category_id(guild_id, category_id):
@@ -466,7 +467,8 @@ def get_protected_channels_file(guild_id):
 
 def protect_channel_id(guild_id, channel_id):
     with open(get_protected_channels_file(guild_id), "a+") as f:
-        f.write(str(channel_id))
+        line = f"{channel_id}\n"
+        f.write(line)
 
 
 def unprotect_channel_id(guild_id, channel_id):
