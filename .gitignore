@@ -1,6 +1,8 @@
 # USER DEFINED
-test_channel.txt
-test_to_delete.txt
+*_log_channel.txt
+*_to_delete.txt
+*_delete_categories.txt
+*_protected_channels.txt
 
 
 # Byte-compiled / optimized / DLL files
