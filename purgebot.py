@@ -62,8 +62,17 @@ async def purge(inter: disnake.ApplicationCommandInteraction):
         ),
     ]
 
+    # Truncate channel name for modal title
+    channel_name = inter.channel.name
+    char_limit = 33
+    title = (
+        (channel_name[:char_limit] + "...")
+        if len(channel_name) > char_limit
+        else channel_name
+    )
+
     modal = Modal(
-        title=f"Delete #{inter.channel.name}?",
+        title=f"Delete #{title}?",
         custom_id="purge_modal",
         components=components,
         # timeout=5,
@@ -642,10 +651,11 @@ async def on_modal_submit(inter: disnake.ModalInteraction):
                             embed_value = (
                                 f"by {dt_to_discord_date_duration(when_dt_str)}"
                             )
-                            message = message + f"by {embed_value}"
+                            # message = message + f"by {embed_value}"
                         else:
                             embed_value = "in a few seconds"
-                            message = message + embed_value
+
+                        message = message + embed_value
 
                         # Log event
                         await log_attempt_to_delete(
