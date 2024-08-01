@@ -27,7 +27,7 @@ bot = commands.Bot(
     description=description,
     help_command=None,
     intents=intents,
-    testguilds=[679218449024811067],
+    test_guilds=[679218449024811067],
 )
 
 
